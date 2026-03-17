@@ -8,15 +8,19 @@ Sube la carpeta `Ventas` a un repositorio.
 
 ## 2. Crea una base de datos Postgres
 
-Puedes usar Vercel Postgres, Neon, Supabase o Railway.
+Puedes usar Supabase, Neon o Railway.
 
-Necesitas una `DATABASE_URL` de PostgreSQL.
+Para Supabase usa:
+
+- `DATABASE_URL`: pooler en puerto `6543`
+- `DIRECT_URL`: conexion directa en puerto `5432`
 
 ## 3. Configura variables de entorno en Vercel
 
 En el proyecto de Vercel añade:
 
 - `DATABASE_URL`
+- `DIRECT_URL`
 - `AUTH_SECRET`
 - `GOOGLE_SERVICE_ACCOUNT_KEY`
 - `GOOGLE_SHEETS_ID` (opcional)
@@ -29,18 +33,36 @@ Antes del primer deploy, ejecuta en tu terminal:
 
 ```bash
 cd /Users/simongnegrete/Ventas
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB_NAME?sslmode=require" npm run db:push:vercel
+DIRECT_URL="postgresql://USER:PASSWORD@HOST:5432/postgres" \
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:6543/postgres?pgbouncer=true&connection_limit=1" \
+npm run db:push:supabase
 ```
 
-Esto genera un schema temporal de Prisma para Vercel y crea las tablas en Postgres.
+Esto genera los schemas temporales de Prisma y crea las tablas en Postgres.
 
-## 5. Importa el proyecto en Vercel
+## 5. Migra los datos actuales desde SQLite
+
+Si quieres conservar tus datos actuales:
+
+```bash
+cd /Users/simongnegrete/Ventas
+DIRECT_URL="postgresql://USER:PASSWORD@HOST:5432/postgres" \
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:6543/postgres?pgbouncer=true&connection_limit=1" \
+npm run migrate:supabase
+```
+
+Este script:
+
+1. lee `prisma/dev.db`
+2. vacia las tablas destino en Postgres
+3. copia usuarios, configuracion, equipo, proyectos, borradores y lineas
+## 6. Importa el proyecto en Vercel
 
 - Importa el repositorio
 - Framework: `Next.js`
 - El archivo [`vercel.json`](/Users/simongnegrete/Ventas/vercel.json) ya fuerza el build correcto para Postgres
 
-## 6. Despliega
+## 7. Despliega
 
 Vercel ejecutara:
 
@@ -53,9 +75,3 @@ Ese script:
 1. genera `prisma/schema.vercel.prisma`
 2. genera Prisma Client para PostgreSQL
 3. construye la app con Next.js
-
-## Nota sobre los datos actuales
-
-Tus datos actuales estan en SQLite (`prisma/dev.db`). `db push` crea la estructura en Postgres, pero no mueve automaticamente los datos.
-
-Si quieres conservar los datos actuales, el siguiente paso es hacer una migracion de datos de SQLite a Postgres.
